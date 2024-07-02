@@ -1,8 +1,13 @@
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-r8$g6b#wkd2k8x!ar&3q!yy)laf5$^feib)ov#8%p7gr=*0)n+'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
@@ -19,6 +24,7 @@ INSTALLED_APPS = [
     'emails.apps.EmailsConfig',
     'rest_framework',
     'django_celery_results',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -93,10 +99,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_STORE_EAGER_RESULT = True
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
-MAILCHIMP_API_KEY = 'dummy-api-key'
-MAILCHIMP_DATA_CENTER = 'usX'
-MAILCHIMP_TEMPLATE_NAME = 'your_mailchimp_template_name'
+MAILCHIMP_API_KEY = os.getenv('MAILCHIMP_API_KEY')
+MAILCHIMP_DATA_CENTER = os.getenv('MAILCHIMP_DATA_CENTER')
+MAILCHIMP_TEMPLATE_NAME = os.getenv('MAILCHIMP_TEMPLATE_NAME')
 
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
@@ -110,10 +118,16 @@ LOGGING = {
             'class': 'logging.StreamHandler',
         },
     },
-    'loggers': {
-        'emails.signals': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
+
+
+CELERY_BEAT_SCHEDULE = {
+    'retry-failed-emails-every-5-minutes': {
+        'task': 'emails.tasks.retry_failed_emails',
+        'schedule': 300.0,
     },
 }

@@ -9,4 +9,4 @@ class EmailLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.email} - {self.status}"
+        return f'{self.email} - {self.status}'

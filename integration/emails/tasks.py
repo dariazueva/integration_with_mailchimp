@@ -1,28 +1,44 @@
+import logging
 import random
+
 from celery import shared_task
 from django.conf import settings
-from .models import EmailLog
+
+from emails.models import EmailLog
+
+logger = logging.getLogger(__name__)
+
 
 @shared_task
 def send_email_via_mailchimp(email, user_name):
     api_key = settings.MAILCHIMP_API_KEY
     template_name = settings.MAILCHIMP_TEMPLATE_NAME
-    message_id = f"register_{email}"
-    if EmailLog.objects.filter(message_id=message_id, status='success').exists():
+    message_id = f'register_{email}'
+    logger.info(f'Attempting to send email to {email} for user {user_name}')
+    if EmailLog.objects.filter(message_id=message_id,
+                               status='success').exists():
+        logger.info(f'Email already successfully sent to {email}')
         return
     try:
         response = {
-            "email": email,
-            "status": random.choice(["sent", "queued", "rejected"]),
-            "_id": "example_id"
+            'email': email,
+            'status': random.choice(['sent', 'queued', 'rejected']),
+            '_id': 'example_id'
         }
-        if response["status"] == "sent":
-            EmailLog.objects.create(email=email, status='success', message_id=message_id)
+        logger.info(f'Mailchimp response: {response}')
+        if response['status'] == 'sent':
+            EmailLog.objects.create(email=email, status='success',
+                                    message_id=message_id)
+            logger.info(f'Email successfully sent to {email}')
         else:
-            EmailLog.objects.create(email=email, status='failed', message_id=message_id)
+            EmailLog.objects.create(email=email, status='failed',
+                                    message_id=message_id)
+            logger.info(f'Failed to send email to {email},'
+                        f'status: {response["status"]}')
     except Exception as e:
-        print(f"An error occurred: {e}")
-        EmailLog.objects.create(email=email, status='failed', message_id=message_id)
+        logger.error(f'An error occurred: {e}')
+        EmailLog.objects.create(email=email, status='failed',
+                                message_id=message_id)
 
 
 @shared_task
